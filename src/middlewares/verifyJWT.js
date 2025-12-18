@@ -2,24 +2,14 @@ import jwt from "jsonwebtoken";
 
 const verifyJWT = (req, res, next) => {
   const auth = req.headers.authorization;
+  
+  
   if (!auth || !auth.startsWith("Bearer ")) {
     return res
       .status(401)
       .json({ message: "No token provided or invalid format" });
   }
   const token = auth.split(" ")[1];
-
-
-  // try {
-  //   console.log(token);
-  //   const payload = jwt.verify(token, process.env.JWT_SECRET);
-
-  //   req.user = payload; // { id, email, role }
-  //   next();
-  // } catch (err) {
-  //   return res.status(401).json({ message: "Invalid or expired token" });
-  // }
-
 
   try {
     if (!process.env.JWT_SECRET) {

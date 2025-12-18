@@ -5,8 +5,6 @@ import { ROLES } from "../constants/roles.js";
 export const getRole = async (req, res) => {
   try {
     const { role } = req.user;
-    console.log(role);
-    
     res.json({role});
   } catch (err) {
     res.status(500).json({ message: "Server error" });
