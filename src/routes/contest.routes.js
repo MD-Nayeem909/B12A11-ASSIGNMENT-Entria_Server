@@ -4,10 +4,11 @@ import { verifyRole } from "../middlewares/verifyRole.js";
 import {
   createContest,
   listContests,
-  approveContest,
+  manageContest,
   joinContest,
   submitTask,
   declareWinner,
+  deleteContest,
 } from "../controllers/contest.controller.js";
 import { ROLES } from "../constants/roles.js";
 
@@ -25,12 +26,9 @@ router.post(
 );
 
 // approve (admin)
-router.patch(
-  "/:id/approve",
-  verifyJWT,
-  verifyRole(ROLES.ADMIN),
-  approveContest
-);
+router.patch("/:id", verifyJWT, verifyRole(ROLES.ADMIN), manageContest);
+
+router.delete("/:id", verifyJWT, verifyRole(ROLES.ADMIN), deleteContest);
 
 // join contest (normal user)
 router.post("/:id/join", verifyJWT, verifyRole(ROLES.USER), joinContest);
