@@ -27,9 +27,6 @@ export const firebaseLogin = async (req, res) => {
       user = await User.create(update);
     }
 
-    console.log(user);
-    
-
     const token = generateToken(user);
     res.json({ user, token });
   } catch (err) {

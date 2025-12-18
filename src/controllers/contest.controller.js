@@ -33,7 +33,7 @@ export const createContest = async (req, res) => {
 /* List contests with pagination + filter + sort */
 export const listContests = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 10, 100);
     const skip = (page - 1) * limit;
     const { q, type, status, sortBy } = req.query;
@@ -44,8 +44,8 @@ export const listContests = async (req, res) => {
     if (status) filter.status = status;
 
     let query = Contest.find(filter).skip(skip).limit(limit);
-    if (sortBy === "participants")
-      query = query.sort({ "participants.length": -1 });
+
+    if (sortBy === "participants") query = query.sort({ participants: -1 });
     else if (sortBy === "newest") query = query.sort({ createdAt: -1 });
     else query = query.sort({ createdAt: -1 });
 
@@ -54,7 +54,10 @@ export const listContests = async (req, res) => {
       Contest.countDocuments(filter),
     ]);
 
-    res.json({ page, limit, total, results });
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+
+    res.json({ page, limit, total, totalPages, hasMore, results });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -62,15 +65,37 @@ export const listContests = async (req, res) => {
 };
 
 /* Approve contest (admin) */
-export const approveContest = async (req, res) => {
+export const manageContest = async (req, res) => {
   try {
+    const stats = ["pending", "reject", "complete", "confirm"];
     const { id } = req.params;
+    let { status } = req.query;
+    if (!stats.includes(status))
+      return res.status(400).json({ message: "Invalid status" });
+    if (status === "reject") {
+      status = "rejected";
+    } else if (status === "confirm") {
+      status = "approved";
+    }
     const updated = await Contest.findByIdAndUpdate(
       id,
-      { status: "approved" },
+      { status },
       { new: true }
     );
     res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* Delete contest (admin) */
+export const deleteContest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const contest = await Contest.findById(id);
+    if (!contest) return res.status(404).json({ message: "Contest not found" });
+    await contest.deleteOne();
+    res.json({ message: "Contest deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
