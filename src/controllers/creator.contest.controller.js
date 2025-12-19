@@ -32,7 +32,7 @@ export const updateContest = async (req, res) => {
   if (!contest)
     return res.status(404).json({ message: "Contest not found" });
 
-  if (contest.creator.toString() !== req.user._id.toString())
+  if (contest.creatorId.toString() !== req.user.id.toString())
     return res.status(403).json({ message: "Not your contest" });
 
   if (contest.status !== "pending")
