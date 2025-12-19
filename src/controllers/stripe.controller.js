@@ -4,36 +4,40 @@
 // app.use(express.static('public'));
 
 import Stripe from "stripe";
-
-const YOUR_DOMAIN = "http://localhost:5173";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const YOUR_DOMAIN = "http://localhost:5173";
 
 export const createCheckoutSession = async (req, res) => {
-  const paymentInfo = req.body;
-  console.log(paymentInfo);
+  try {
+    const paymentInfo = req.body;
+    console.log(paymentInfo);
 
-  const amount = parseInt(paymentInfo.price) * 100;
+    const amount = parseInt(paymentInfo.contestPrice) * 100;
 
-  const session = await stripe.checkout.sessions.create({
-    line_items: [
-      {
-        price_data: {
-          currency: "USD",
-          unit_amount: amount,
-          product_data: {
-            name: paymentInfo.contestName,
+    const session = await stripe.checkout.sessions.create({
+      line_items: [
+        {
+          price_data: {
+            currency: "USD",
+            unit_amount: amount,
+            product_data: {
+              name: paymentInfo.contestTitle,
+            },
           },
+          quantity: 1,
         },
-        quantity: 1,
-      },
-    ],
-    customer_email: req.user.email,
-    mode: "payment",
-    metadata: { contestId: paymentInfo.contestId },
-    success_url: `${YOUR_DOMAIN}?success=true`,
-    cancel_url: `${YOUR_DOMAIN}?success=true`,
-  });
-  res.json({ url: session.url });
+      ],
+      mode: "payment",
+      customer_email: req.user.email,
+      metadata: { contestId: paymentInfo.contestId },
+      success_url: `${YOUR_DOMAIN}/dashboard/payment_success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${YOUR_DOMAIN}/dashboard/payment-cancel`,
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    res.status(500).json({ message: "Stripe session failed" });
+  }
 };
 
 export const confirmPayment = async (req, res) => {
