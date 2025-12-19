@@ -8,7 +8,7 @@ const paymentSchema = new mongoose.Schema(
       required: true,
     },
 
-    contest: {
+    contestId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Contest",
       required: true,
@@ -27,8 +27,8 @@ const paymentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "success", "failed"],
-      default: "success",
+      enum: ["pending", "paid", "failed"],
+      default: "paid",
     },
   },
   { timestamps: true }
