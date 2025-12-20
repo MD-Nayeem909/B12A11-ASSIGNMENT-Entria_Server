@@ -1,5 +1,6 @@
 import Contest from "../models/Contest.model.js";
 import User from "../models/User.model.js";
+import WinnerModel from "../models/Winner.model.js";
 
 /* Create contest (creator or admin) */
 export const createContest = async (req, res) => {
@@ -33,9 +34,6 @@ export const createContest = async (req, res) => {
 /* List contests with pagination + filter + sort */
 export const listContests = async (req, res) => {
   try {
-    const page = Math.max(parseInt(req.query.page) || 1, 1);
-    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
-    const skip = (page - 1) * limit;
     const { q, type, status, sortBy } = req.query;
 
     const filter = {};
@@ -43,7 +41,7 @@ export const listContests = async (req, res) => {
     if (type) filter.type = type;
     if (status) filter.status = status;
 
-    let query = Contest.find(filter).skip(skip).limit(limit);
+    let query = Contest.find(filter);
 
     if (sortBy === "participants") query = query.sort({ participants: -1 });
     else if (sortBy === "newest") query = query.sort({ createdAt: -1 });
@@ -54,10 +52,7 @@ export const listContests = async (req, res) => {
       Contest.countDocuments(filter),
     ]);
 
-    const totalPages = Math.ceil(total / limit);
-    const hasMore = page < totalPages;
-
-    res.json({ page, limit, total, totalPages, hasMore, results });
+    res.json({ total, results });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -141,7 +136,7 @@ export const joinContest = async (req, res) => {
 export const submitTask = async (req, res) => {
   try {
     const { id } = req.params; // contest id
-    const { submissionUrl } = req.body;
+    const { submission } = req.body;
     const currentUser = await User.findById(req.user.id);
     if (!currentUser)
       return res.status(404).json({ message: "User not found" });
@@ -149,13 +144,16 @@ export const submitTask = async (req, res) => {
     const contest = await Contest.findById(id);
     if (!contest) return res.status(404).json({ message: "Contest not found" });
 
-    const participant = contest.participants.find(
-      (p) => p.userId === currentUser.firebaseUID
+    const participant = contest.participants.find((p) =>
+      p.userId.equals(currentUser._id)
     );
+    console.log(contest.participants);
+    console.log(currentUser._id);
+
     if (!participant)
       return res.status(400).json({ message: "Not registered for contest" });
 
-    participant.submissionUrl = submissionUrl;
+    participant.submission = submission;
     participant.submittedAt = new Date();
     await contest.save();
 
@@ -165,37 +163,205 @@ export const submitTask = async (req, res) => {
   }
 };
 
+export const getContestSubmissions = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const contest = await Contest.findById(id)
+      .populate({
+        path: "participants.userId",
+        select: "name email image",
+      })
+      .select("title participants winner"); // extra data কমাতে
+
+    if (!contest) {
+      return res.status(404).json({ message: "Contest not found" });
+    }
+
+    res.json(contest);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 /* Declare winner (creator or admin) */
+// export const declareWinner = async (req, res) => {
+//   try {
+//     const { id } = req.params; // contest id
+//     const { winnerUserId } = req.body;
+//     const contest = await Contest.findById(id);
+//     if (!contest) return res.status(404).json({ message: "Contest not found" });
+
+//     // Ensure deadline passed or requester is admin
+//     const now = new Date();
+//     if (new Date(contest.deadline) > now) {
+//       return res
+//         .status(400)
+//         .json({ message: "Cannot declare before deadline" });
+//     }
+
+//     contest.winner = { userId: winnerUserId, announcedAt: new Date() };
+//     contest.status = "completed";
+
+//     // increment user's wins
+//     const winnerUser = await User.findOne({ _id: winnerUser._Id });
+//     if (winnerUser) {
+//       winnerUser.totalWins = (winnerUser.totalWins || 0) + 1;
+//       winnerUser.wonContests.push(contest._id);
+//       await winnerUser.save();
+//     }
+//     await WinnerModel.create({
+//       winner: winnerUser._Id,
+//       contest: id,
+//       prizeMoney: contest.prize,
+//     });
+//     await contest.save();
+
+//     res.json({ message: "Winner declared", contest });
+//   } catch (err) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 export const declareWinner = async (req, res) => {
   try {
-    const { id } = req.params; // contest id
-    const { winnerFirebaseUID } = req.body;
+    const { id } = req.params; // contestId
+    const { winnerUserId } = req.body;
+
+    if (!winnerUserId) {
+      return res.status(400).json({ message: "Winner userId required" });
+    }
 
     const contest = await Contest.findById(id);
-    if (!contest) return res.status(404).json({ message: "Contest not found" });
+    if (!contest) {
+      return res.status(404).json({ message: "Contest not found" });
+    }
 
-    // Ensure deadline passed or requester is admin
+    // ❌ already completed
+    if (contest.status === "completed") {
+      return res.status(400).json({ message: "Winner already declared" });
+    }
+
+    // ⏳ deadline check (admin bypass)
     const now = new Date();
-    if (new Date(contest.deadline) > now && req.user.role !== "admin") {
+    if (new Date(contest.deadline) > now) {
       return res
         .status(400)
-        .json({ message: "Cannot declare before deadline" });
+        .json({ message: "Cannot declare winner before deadline" });
     }
 
-    contest.winner = { userId: winnerFirebaseUID, announcedAt: new Date() };
+    // ✅ validate participant
+    const isParticipant = contest.participants.some(
+      (p) => p.userId.toString() === winnerUserId
+    );
+
+    if (!isParticipant) {
+      return res
+        .status(400)
+        .json({ message: "User did not participate in this contest" });
+    }
+
+    // 🏆 set winner
+    contest.winner = {
+      userId: winnerUserId,
+      announcedAt: new Date(),
+    };
     contest.status = "completed";
+
+    // 👤 update user
+    const winnerUser = await User.findById(winnerUserId);
+    if (!winnerUser) {
+      return res.status(404).json({ message: "Winner user not found" });
+    }
+
+    winnerUser.totalWins = (winnerUser.totalWins || 0) + 1;
+    winnerUser.wonContests.push(contest._id);
+    await winnerUser.save();
+
+    // 🥇 winner collection
+    await WinnerModel.create({
+      winner: winnerUser._id,
+      contest: contest._id,
+      prizeMoney: contest.prize,
+    });
+
     await contest.save();
 
-    // increment user's wins
-    const winnerUser = await User.findOne({ firebaseUID: winnerFirebaseUID });
-    if (winnerUser) {
-      winnerUser.totalWins = (winnerUser.totalWins || 0) + 1;
-      winnerUser.wonContests.push(contest._id);
-      await winnerUser.save();
-    }
-
-    res.json({ message: "Winner declared", contest });
+    res.json({
+      message: "Winner declared successfully",
+      contest,
+    });
   } catch (err) {
+    console.error("DECLARE WINNER ERROR:", err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* Get top winners (admin) */
+// export const getTopWinners = async (req, res) => {
+//   try {
+//     const winners = await WinnerModel.find()
+//       .populate({
+//         path: "winner",
+//         select: "name email image totalWins",
+//       })
+//       .populate({
+//         path: "contest",
+//         select: "title image prize",
+//       })
+//       .sort({ prizeMoney: -1 })
+//       .limit(10); // 🔥 top 10
+
+//     res.json(winners);
+//   } catch (err) {
+//     console.error("GET WINNERS ERROR:", err);
+//     res.status(500).json({ message: "Failed to fetch winners" });
+//   }
+// };
+
+export const getTopWinners = async (req, res) => {
+  try {
+    const winners = await WinnerModel.aggregate([
+      {
+        // 🔹 Group by winner
+        $group: {
+          _id: "$winner",
+          totalWins: { $sum: 1 },
+          totalPrize: { $sum: "$prizeMoney" },
+        },
+      },
+      {
+        // 🔹 Sort by wins first, then prize
+        $sort: { totalWins: -1, totalPrize: -1 },
+      },
+      {
+        // 🔹 Join User collection
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      {
+        // 🔹 Shape final response
+        $project: {
+          _id: 0,
+          userId: "$user._id",
+          name: "$user.name",
+          email: "$user.email",
+          image: "$user.image",
+          totalWins: 1,
+          totalPrize: 1,
+        },
+      },
+    ]);
+
+    res.json(winners);
+  } catch (err) {
+    console.error("TOP WINNERS ERROR:", err);
+    res.status(500).json({ message: "Failed to load leaderboard" });
   }
 };

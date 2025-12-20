@@ -22,8 +22,11 @@ const ContestSchema = new mongoose.Schema(
     creatorId: { type: String, required: true }, // firebaseUID of creator
     participants: [
       {
-        userId: String, // firebaseUID
-        submissionUrl: String,
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        submission: String,
         submittedAt: Date,
       },
     ],

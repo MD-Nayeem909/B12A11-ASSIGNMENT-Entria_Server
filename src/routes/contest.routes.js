@@ -9,6 +9,8 @@ import {
   submitTask,
   declareWinner,
   deleteContest,
+  getContestSubmissions,
+  getTopWinners,
 } from "../controllers/contest.controller.js";
 import { ROLES } from "../constants/roles.js";
 
@@ -16,6 +18,8 @@ const router = express.Router();
 
 // public listing
 router.get("/", listContests);
+router.get("/winners", getTopWinners);
+router.get("/:id", getContestSubmissions);
 
 // create contest (creator or admin)
 router.post(
@@ -34,6 +38,7 @@ router.delete("/:id", verifyJWT, verifyRole(ROLES.ADMIN), deleteContest);
 router.post("/:id/join", verifyJWT, verifyRole(ROLES.USER), joinContest);
 
 // submit task (after registration)
+// app.use("/api/contests", contestRoutes);
 router.post("/:id/submit", verifyJWT, submitTask);
 
 // declare winner (creator or admin) - additional checks in controller
@@ -43,5 +48,7 @@ router.post(
   verifyRole(ROLES.CREATOR, ROLES.ADMIN),
   declareWinner
 );
+
+
 
 export default router;

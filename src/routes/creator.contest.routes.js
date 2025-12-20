@@ -24,7 +24,7 @@ router.post("/", createContest);
 router.get("/my_contests", getMyContests);
 
 // ✏️ Update contest (only pending)
-router.patch("/:id", updateContest);
+router.patch("/:id",verifyJWT, updateContest);
 
 // 🗑️ Delete contest (only pending)
 router.delete("/:id", deleteContest);
