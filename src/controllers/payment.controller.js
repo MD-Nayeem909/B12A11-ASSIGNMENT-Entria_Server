@@ -76,6 +76,9 @@ export const confirmPayment = async (req, res) => {
       $push: { participantsList: req.user.uid },
     });
 
+
+
+
     res.json({
       success: true,
       payment,

@@ -15,8 +15,8 @@ const verifyJWT = (req, res, next) => {
       console.error("JWT_SECRET is missing in .env file");
       return res.status(500).json({ message: "Server configuration error" });
     }
+    
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-
     req.user = payload;
     next();
   } catch (err) {

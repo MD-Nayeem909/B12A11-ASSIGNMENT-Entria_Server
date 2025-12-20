@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import Payment from "../models/Payment.model.js";
 import Contest from "../models/Contest.model.js";
+import User from "../models/User.model.js";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const YOUR_DOMAIN = "http://localhost:5173";
 
@@ -83,12 +84,17 @@ export const confirmPayment = async (req, res) => {
         $addToSet: {
           participants: {
             userId: req.user.id,
-            submittedAt: Date.now(),
+            // submittedAt: Date.now(),
           },
         },
       },
       { new: true }
     );
+
+    // User joni contest
+    await User.findByIdAndUpdate(req.user.id, {
+      $push: { joinedContests: contestId },
+    });
 
     res.status(201).json(payment);
   } catch (err) {
