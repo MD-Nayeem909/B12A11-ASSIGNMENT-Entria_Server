@@ -15,8 +15,8 @@ export const firebaseLogin = async (req, res) => {
     const update = {
       firebaseUID: uid,
       name: name || decoded.name || "No name",
-      email,
-      image: picture || "",
+      email: email || decoded.email || "",
+      image: picture || decoded.picture || "",
     };
     const opts = { upsert: true, new: true, setDefaultsOnInsert: true };
 
