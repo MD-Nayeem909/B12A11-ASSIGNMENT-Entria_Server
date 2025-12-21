@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Contest from "../models/Contest.model.js";
 import User from "../models/User.model.js";
 import WinnerModel from "../models/Winner.model.js";
@@ -34,14 +35,23 @@ export const createContest = async (req, res) => {
 /* List contests with pagination + filter + sort */
 export const listContests = async (req, res) => {
   try {
-    const { q, type, status, sortBy } = req.query;
-
+    let { q, type, status, sortBy, participated } = req.query;
+    if (participated) {
+      const user = await User.findOne({ firebaseUID: participated });
+      if (!user) return res.status(404).json({ message: "User not found" });
+      participated = user._id;
+    }
     const filter = {};
     if (q) filter.title = { $regex: q, $options: "i" };
     if (type) filter.type = type;
     if (status) filter.status = status;
+    if (participated)
+      filter["participants.userId"] = new mongoose.Types.ObjectId(participated);
 
-    let query = Contest.find(filter);
+    let query = Contest.find(filter).populate({
+      path: "winner.userId",
+      select: "name email image",
+    });
 
     if (sortBy === "participants") query = query.sort({ participants: -1 });
     else if (sortBy === "newest") query = query.sort({ createdAt: -1 });
@@ -299,44 +309,46 @@ export const declareWinner = async (req, res) => {
 };
 
 /* Get top winners (admin) */
-// export const getTopWinners = async (req, res) => {
-//   try {
-//     const winners = await WinnerModel.find()
-//       .populate({
-//         path: "winner",
-//         select: "name email image totalWins",
-//       })
-//       .populate({
-//         path: "contest",
-//         select: "title image prize",
-//       })
-//       .sort({ prizeMoney: -1 })
-//       .limit(10); // 🔥 top 10
-
-//     res.json(winners);
-//   } catch (err) {
-//     console.error("GET WINNERS ERROR:", err);
-//     res.status(500).json({ message: "Failed to fetch winners" });
-//   }
-// };
-
 export const getTopWinners = async (req, res) => {
   try {
     const winners = await WinnerModel.aggregate([
+      // 1️⃣ Contest join
       {
-        // 🔹 Group by winner
-        $group: {
-          _id: "$winner",
-          totalWins: { $sum: 1 },
-          totalPrize: { $sum: "$prizeMoney" },
+        $lookup: {
+          from: "contests",
+          localField: "contest",
+          foreignField: "_id",
+          as: "contestInfo",
         },
       },
+      { $unwind: "$contestInfo" },
+
+      // 2️⃣ Group by winner
       {
-        // 🔹 Sort by wins first, then prize
+        $group: {
+          _id: "$winner",
+
+          totalWins: { $sum: 1 },
+          totalPrize: { $sum: "$prizeMoney" },
+
+          contests: {
+            $push: {
+              contestId: "$contestInfo._id",
+              title: "$contestInfo.title",
+              image: "$contestInfo.image",
+              prize: "$contestInfo.prize",
+            },
+          },
+        },
+      },
+
+      // 3️⃣ Sort (most wins first)
+      {
         $sort: { totalWins: -1, totalPrize: -1 },
       },
+
+      // 4️⃣ Join User
       {
-        // 🔹 Join User collection
         $lookup: {
           from: "users",
           localField: "_id",
@@ -345,23 +357,75 @@ export const getTopWinners = async (req, res) => {
         },
       },
       { $unwind: "$user" },
+
+      // 5️⃣ Final shape
       {
-        // 🔹 Shape final response
         $project: {
           _id: 0,
           userId: "$user._id",
           name: "$user.name",
           email: "$user.email",
           image: "$user.image",
+
           totalWins: 1,
           totalPrize: 1,
+
+          contests: 1, // 🔥 title + image here
         },
       },
     ]);
 
     res.json(winners);
   } catch (err) {
-    console.error("TOP WINNERS ERROR:", err);
-    res.status(500).json({ message: "Failed to load leaderboard" });
+    console.error("GET TOP WINNERS ERROR:", err);
+    res.status(500).json({ message: "Failed to fetch leaderboard" });
   }
 };
+
+export const getMyWinnerContests = async (req, res) => {
+  try {
+    const { id } = req.user;
+    if (!id) return res.status(400).json({ message: "User ID required" });
+    const winnerContests = await WinnerModel.find({ winner: id })
+      .populate("contest", "title")
+      .populate("winner", "name");
+    res.json({ message: "My winner contests", winnerContests });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getLeaderboardStats = async (req, res) => {
+  try {
+    // 1️⃣ Total Prize Money Awarded
+    const totalPrizeResult = await WinnerModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalPrizeMoney: { $sum: "$prizeMoney" },
+        },
+      },
+    ]);
+
+    const totalPrizeMoney = totalPrizeResult[0]?.totalPrizeMoney || 0;
+
+    // 2️⃣ Total Winners Count
+    const totalWinners = await WinnerModel.countDocuments();
+
+    // 3️⃣ Active Contests Count
+    const activeContests = await Contest.countDocuments({
+      status: "approved",
+      deadline: { $gt: new Date() },
+    });
+
+    res.json({
+      totalPrizeMoney,
+      totalWinners,
+      activeContests,
+    });
+  } catch (error) {
+    console.error("LEADERBOARD STATS ERROR:", error);
+    res.status(500).json({ message: "Failed to load stats" });
+  }
+};
+

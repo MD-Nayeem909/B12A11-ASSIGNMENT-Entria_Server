@@ -31,8 +31,15 @@ const ContestSchema = new mongoose.Schema(
       },
     ],
     winner: {
-      userId: { type: String, default: null },
-      announcedAt: { type: Date, default: null },
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
+      announcedAt: {
+        type: Date,
+        default: null,
+      },
     },
   },
   { timestamps: true }
