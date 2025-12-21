@@ -18,7 +18,7 @@ const router = express.Router();
 
 // public listing
 router.get("/", listContests);
-router.get("/winners", getTopWinners);
+router.get("/winners/top", getTopWinners);
 router.get("/:id", getContestSubmissions);
 
 // create contest (creator or admin)

@@ -1,11 +1,12 @@
 import User from "../models/User.model.js";
 import { ROLES } from "../constants/roles.js";
+import Contest from "../models/Contest.model.js";
 
 //get role
 export const getRole = async (req, res) => {
   try {
     const { role } = req.user;
-    res.json({role});
+    res.json({ role });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
@@ -31,6 +32,17 @@ export const changeUserRole = async (req, res) => {
     }
     const user = await User.findByIdAndUpdate(userId, { role }, { new: true });
     res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const joinedContests = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(req.user.id);
+    const joinedContests = user.joinedContests.includes(id);
+    res.json({ message: "Joined contests", joinedContests });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
