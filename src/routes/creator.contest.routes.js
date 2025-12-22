@@ -17,19 +17,19 @@ const router = express.Router();
 router.use(verifyJWT);
 router.use(verifyRole(ROLES.CREATOR, ROLES.ADMIN));
 
-// ➕ Create contest
+//  Create contest
 router.post("/", createContest);
 
-// 📄 Get creator's own contests
+//  Get creator's own contests
 router.get("/my_contests", getMyContests);
 
-// ✏️ Update contest (only pending)
-router.patch("/:id",verifyJWT, updateContest);
+//  Update contest (only pending)
+router.patch("/:id", verifyJWT, updateContest);
 
-// 🗑️ Delete contest (only pending)
+//  Delete contest (only pending)
 router.delete("/:id", deleteContest);
 
-// 🏆 Declare winner
+//  Declare winner
 router.post("/:id/declare_winner", declareWinner);
 
 export default router;
