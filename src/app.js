@@ -13,7 +13,7 @@ import adminRoutes from "./routes/admin.routes.js";
 const app = express();
 // Configure CORS
 const corsOptions = {
-  origin: "http://localhost:5173", // Your frontend application's origin
+  origin: ["http://localhost:5173"], // Your frontend application's origin
   credentials: true, // Allow cookies to be sent
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Explicitly allow methods
   allowedHeaders: ["Content-Type", "Authorization"], // Explicitly allow headers
