@@ -33,6 +33,10 @@ app.use("/api/creator/contests", creatorContestRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
+app.use("/", (req, res) => {
+  res.send("Welcome to Entria API");
+});
+
 // health
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
