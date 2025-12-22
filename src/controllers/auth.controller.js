@@ -4,7 +4,7 @@ import { generateToken } from "../utils/generateToken.js";
 
 export const firebaseLogin = async (req, res) => {
   const { idToken } = req.body;
-  
+
   if (!idToken) return res.status(400).json({ message: "idToken required" });
 
   try {

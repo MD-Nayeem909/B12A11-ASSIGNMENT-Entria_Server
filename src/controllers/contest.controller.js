@@ -36,6 +36,9 @@ export const createContest = async (req, res) => {
 export const listContests = async (req, res) => {
   try {
     let { q, type, status, sortBy, participated } = req.query;
+
+    
+    
     if (participated) {
       const user = await User.findOne({ firebaseUID: participated });
       if (!user) return res.status(404).json({ message: "User not found" });
@@ -61,7 +64,6 @@ export const listContests = async (req, res) => {
       query.exec(),
       Contest.countDocuments(filter),
     ]);
-
     res.json({ total, results });
   } catch (err) {
     console.error(err);
