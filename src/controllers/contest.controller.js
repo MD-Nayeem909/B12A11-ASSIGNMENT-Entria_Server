@@ -23,6 +23,7 @@ export const createContest = async (req, res) => {
       deadline: body.deadline,
       creatorId: creator.firebaseUID,
     };
+    
 
     const contest = await Contest.create(contestData);
     res.status(201).json(contest);
@@ -431,3 +432,31 @@ export const getLeaderboardStats = async (req, res) => {
   }
 };
 
+export const searchContests = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    // safety check
+    if (!q || q.trim() === "") {
+      return res.status(400).json({ message: "Search query required" });
+    }
+
+    const regex = new RegExp(q, "i"); // case-insensitive
+
+    const contests = await Contest.find({
+      $or: [
+        { title: regex },
+        { type: regex },
+        { category: regex },
+      ],
+    })
+      .select("title type category prize status")
+      .limit(10)
+      .sort({ createdAt: -1 });
+
+    res.json(contests);
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

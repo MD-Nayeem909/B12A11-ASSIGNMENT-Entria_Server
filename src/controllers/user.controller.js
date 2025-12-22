@@ -60,3 +60,16 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const updateUserProfile = async (req, res) => {
+  const { bio, address } = req.body;
+  console.log(req.params.uid);
+
+  const user = await User.findOneAndUpdate(
+    { firebaseUID: req.params.uid },
+    { bio, address },
+    { new: true }
+  );
+
+  res.json(user);
+};

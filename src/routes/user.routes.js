@@ -1,7 +1,7 @@
 import express from "express";
 import verifyJWT from "../middlewares/verifyJWT.js";
 import { verifyRole } from "../middlewares/verifyRole.js";
-import { getAllUsers, changeUserRole, getRole, joinedContests, deleteUser } from "../controllers/user.controller.js";
+import { getAllUsers, changeUserRole, getRole, joinedContests, deleteUser, updateUserProfile } from "../controllers/user.controller.js";
 import { ROLES } from "../constants/roles.js";
 
 const router = express.Router();
@@ -12,6 +12,9 @@ const router = express.Router();
 router.get("/role", verifyJWT, getRole);
 router.get("/", verifyJWT, verifyRole(ROLES.ADMIN), getAllUsers);
 router.get("/:id", verifyJWT, joinedContests);
+
+// user profile update
+router.patch("/update/:uid", verifyJWT, updateUserProfile);
 
 // change role (admin only)
 router.patch("/role/:userId", verifyJWT, verifyRole(ROLES.ADMIN), changeUserRole);

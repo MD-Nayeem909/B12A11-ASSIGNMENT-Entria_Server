@@ -13,6 +13,7 @@ import {
   getTopWinners,
   getMyWinnerContests,
   getLeaderboardStats,
+  searchContests,
 } from "../controllers/contest.controller.js";
 import { ROLES } from "../constants/roles.js";
 
@@ -21,6 +22,7 @@ const router = express.Router();
 // public listing
 router.get("/", listContests);
 router.get("/winners/top", getTopWinners);
+router.get("/search", searchContests);
 router.get("/my_winned_contests", verifyJWT, getMyWinnerContests);
 router.get("/:id", getContestSubmissions);
 

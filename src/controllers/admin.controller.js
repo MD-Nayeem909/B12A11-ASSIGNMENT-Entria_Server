@@ -62,3 +62,16 @@ export const deleteContest = async (req, res) => {
 
   res.json({ message: "Contest deleted successfully" });
 };
+
+export const allContestReports =  async (req, res) => {
+  try {
+    const contestReports = await Contest
+      .find({})
+      .select("creatorId prize status createdAt")
+      .populate("creatorId", "name email")
+      .sort({ createdAt: -1 });
+    res.json(contestReports);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+}

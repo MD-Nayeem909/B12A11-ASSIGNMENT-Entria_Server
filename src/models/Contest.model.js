@@ -19,7 +19,11 @@ const ContestSchema = new mongoose.Schema(
       enum: ["pending", "approved", "rejected", "completed"],
       default: "pending",
     },
-    creatorId: { type: String, required: true }, // firebaseUID of creator
+    creatorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    }, // firebaseUID of creator
     participants: [
       {
         userId: {
