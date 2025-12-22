@@ -1,10 +1,8 @@
 import Contest from "../models/Contest.model.js";
 import Submission from "../models/Submission.model.js";
 
-
-// ➕ Create Contest
+//  Create Contest
 export const createContest = async (req, res) => {
-    
   try {
     const contest = await Contest.create({
       ...req.body,
@@ -17,20 +15,20 @@ export const createContest = async (req, res) => {
   }
 };
 
-// 📄 Get My Contests
+//  Get My Contests
 export const getMyContests = async (req, res) => {
-  const contests = await Contest.find({ creatorId: req.user.id })
-    .sort({ createdAt: -1 });
-    
+  const contests = await Contest.find({ creatorId: req.user.id }).sort({
+    createdAt: -1,
+  });
+
   res.json(contests);
 };
 
-// ✏️ Update Contest (only pending)
+//  Update Contest (only pending)
 export const updateContest = async (req, res) => {
   const contest = await Contest.findById(req.params.id);
 
-  if (!contest)
-    return res.status(404).json({ message: "Contest not found" });
+  if (!contest) return res.status(404).json({ message: "Contest not found" });
 
   if (contest.creatorId.toString() !== req.user.id.toString())
     return res.status(403).json({ message: "Not your contest" });
@@ -46,12 +44,11 @@ export const updateContest = async (req, res) => {
   res.json(contest);
 };
 
-// 🗑️ Delete Contest (only pending)
+//  Delete Contest (only pending)
 export const deleteContest = async (req, res) => {
   const contest = await Contest.findById(req.params.id);
 
-  if (!contest)
-    return res.status(404).json({ message: "Contest not found" });
+  if (!contest) return res.status(404).json({ message: "Contest not found" });
 
   if (contest.creator.toString() !== req.user._id.toString())
     return res.status(403).json({ message: "Not your contest" });
@@ -65,14 +62,13 @@ export const deleteContest = async (req, res) => {
   res.json({ message: "Contest deleted successfully" });
 };
 
-// 🏆 Declare Winner
+//  Declare Winner
 export const declareWinner = async (req, res) => {
   const { winnerUserId } = req.body;
 
   const contest = await Contest.findById(req.params.id);
 
-  if (!contest)
-    return res.status(404).json({ message: "Contest not found" });
+  if (!contest) return res.status(404).json({ message: "Contest not found" });
 
   if (contest.creator.toString() !== req.user._id.toString())
     return res.status(403).json({ message: "Not your contest" });
