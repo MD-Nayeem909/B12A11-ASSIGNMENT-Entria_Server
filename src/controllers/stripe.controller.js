@@ -3,7 +3,6 @@ import Payment from "../models/Payment.model.js";
 import Contest from "../models/Contest.model.js";
 import User from "../models/User.model.js";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const YOUR_DOMAIN = "http://localhost:5173";
 
 export const createCheckoutSession = async (req, res) => {
   try {
@@ -26,8 +25,8 @@ export const createCheckoutSession = async (req, res) => {
       mode: "payment",
       customer_email: req.user.email,
       metadata: { contestId: paymentInfo.contestId, userId: req.user.id },
-      success_url: `${YOUR_DOMAIN}/dashboard/payment_success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${YOUR_DOMAIN}/dashboard/payment-cancel`,
+      success_url: `${process.env.CLIENT_URL}/dashboard/payment_success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/dashboard/payment-cancel`,
     });
 
     res.json({ url: session.url });
