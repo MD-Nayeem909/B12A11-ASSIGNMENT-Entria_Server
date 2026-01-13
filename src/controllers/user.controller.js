@@ -1,6 +1,5 @@
 import User from "../models/User.model.js";
 import { ROLES } from "../constants/roles.js";
-import Contest from "../models/Contest.model.js";
 
 //get role
 export const getRole = async (req, res) => {
@@ -22,6 +21,32 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+export const getSingleUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findOne({ firebaseUID: id });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      bio: user.bio,
+      address: user.address,
+      role: user.role,
+      participatedCount: user.joinedContests?.length || 0,
+      wonCount: user.wonContests?.length || 0,
+      totalWins: user.totalWins || 0,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error while fetching profile" });
+  }
+};
+
 // change role (admin)
 export const changeUserRole = async (req, res) => {
   try {
@@ -32,17 +57,6 @@ export const changeUserRole = async (req, res) => {
     }
     const user = await User.findByIdAndUpdate(userId, { role }, { new: true });
     res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-export const joinedContests = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await User.findById(req.user.id);
-    const joinedContests = user.joinedContests.includes(id);
-    res.json({ message: "Joined contests", joinedContests });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }

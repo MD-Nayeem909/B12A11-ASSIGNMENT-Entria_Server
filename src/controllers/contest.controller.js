@@ -400,7 +400,7 @@ export const getMyWinnerContests = async (req, res) => {
 
 export const getLeaderboardStats = async (req, res) => {
   try {
-    // 1️⃣ Total Prize Money Awarded
+    //  Total Prize Money Awarded
     const totalPrizeResult = await WinnerModel.aggregate([
       {
         $group: {
@@ -412,10 +412,10 @@ export const getLeaderboardStats = async (req, res) => {
 
     const totalPrizeMoney = totalPrizeResult[0]?.totalPrizeMoney || 0;
 
-    // 2️⃣ Total Winners Count
+    //  Total Winners Count
     const totalWinners = await WinnerModel.countDocuments();
 
-    // 3️⃣ Active Contests Count
+    // Active Contests Count
     const activeContests = await Contest.countDocuments({
       status: "approved",
       deadline: { $gt: new Date() },
